@@ -39,6 +39,9 @@ class DB:
             sex CHAR(1) NOT NULL,
             room INT,
             FOREIGN KEY (room) REFERENCES Rooms(id)
+
+            INDEX idx_students_room (room),
+            INDEX idx_students_birthday (birthday)
         );
         """
         self.cursor.execute(create_rooms)
