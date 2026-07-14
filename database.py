@@ -38,8 +38,7 @@ class DB:
             birthday DATE NOT NULL,
             sex CHAR(1) NOT NULL,
             room INT,
-            FOREIGN KEY (room) REFERENCES Rooms(id)
-
+            FOREIGN KEY (room) REFERENCES Rooms(id),
             INDEX idx_students_room (room),
             INDEX idx_students_birthday (birthday)
         );

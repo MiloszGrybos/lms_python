@@ -27,7 +27,6 @@ def main():
     db = DB(host=db_host, user=db_user, password=db_password, database=db_name)
     db.createTables()    
     
-    #reading data from files
     reader = JSONReader()
     rooms_data = reader.read(args.rooms)
     students_data = reader.read(args.students)
@@ -36,7 +35,6 @@ def main():
     db.insertRooms(rooms_data)
     db.insertStudents(students_data)
     
-    #choice between export format
     if args.format == 'json':
         exporter = JSONExporter()
     else:
