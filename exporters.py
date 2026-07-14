@@ -10,16 +10,13 @@ class DataExporter(ABC):
 class XMLExporter(DataExporter):
     #writing data into XML format
     def export(self, data: list, output_path: str) -> None:
-
         root = ET.Element("results")
+        
         for row in data:
-            room_element = ET.SubElement(root, "room")
-            
-            id_element = ET.SubElement(room_element, "id")
-            id_element.text = str(row["id"])
-            
-            name_element = ET.SubElement(room_element, "name")
-            name_element.text = str(row["name"])
+            room_element = ET.SubElement(root, "room")            
+            for key, value in row.items():
+                element = ET.SubElement(room_element, key)
+                element.text = str(value)
         
         tree = ET.ElementTree(root)        
         ET.indent(tree, space="    ")         
