@@ -1,27 +1,54 @@
 import mysql.connector
+import re
+from mysql.connector import Error
 
 class DB:
     def __init__(self, host, user, password, database):
-        #temporary connection to create DB
-        temp_conn = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password
-        )
-        temp_cursor = temp_conn.cursor()
-        
-        temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS {database}")
-        
-        temp_cursor.close()
-        temp_conn.close()
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+        self.connection = None
+        self.cursor = None
 
-        self.connection = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database
-        )
-        self.cursor = self.connection.cursor(dictionary=True)
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.cursor:
+            self.cursor.close()
+        if self.connection:
+            self.connection.close()
+
+    def connect(self) -> None:
+        if not re.match(r'^[a-zA-Z0-9_]+$', self.database):
+            raise ValueError("Dangerous database name detected!")
+
+        try:
+            temp_conn = mysql.connector.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password
+            )
+            temp_cursor = temp_conn.cursor()
+            temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self.database}")
+            temp_cursor.close()
+            temp_conn.close()
+        except Error as e:
+            print("Connection couldn't be established")
+            return
+
+        try:
+            self.connection = mysql.connector.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+            self.cursor = self.connection.cursor(dictionary=True)
+        except Error as e:
+            print("Connection couldn't be established, but database was created")
 
     def createTables(self) -> None:
         #Creating tables if they don't exist yet
@@ -48,30 +75,30 @@ class DB:
         self.connection.commit()
 
     def insertRooms(self, rooms: list) -> None:
-        #inserting into Rooms table, checking for duplicate keys to avoid errors at running program again
-        query = """
-        INSERT INTO Rooms (id, name) 
-        VALUES (%s, %s)
-        ON DUPLICATE KEY UPDATE name = VALUES(name);
-        """
-        for room in rooms:
-            self.cursor.execute(query, (room['id'], room['name']))
-        self.connection.commit()
+            query = """
+            INSERT INTO Rooms (id, name) 
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE name = VALUES(name);
+            """
+            rooms_data = [(room['id'], room['name']) for room in rooms]
+            
+            self.cursor.executemany(query, rooms_data)
+            self.connection.commit()
 
     def insertStudents(self, student_list: list) -> None:
         #inserting into Students table
         query = """
-        INSERT INTO Students (id, name, birthday, sex, room) 
+        INSERT INTO Students (id, name, birthday, sex, room_id) 
         VALUES (%s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE 
-            name = VALUES(name),
-            sex = VALUES(sex),
-            birthday = VALUES(birthday),
-            room = VALUES(room);
+            name = VALUES(name), 
+            birthday = VALUES(birthday), 
+            sex = VALUES(sex), 
+            room_id = VALUES(room_id);
         """
-        for student in student_list:
-            data = (student['id'], student['name'], student['birthday'], student['sex'], student['room'])
-            self.cursor.execute(query, data)
+
+        data = [(student['id'], student['name'], student['birthday'], student['sex'], student['room_id']) for student in student_list]
+        self.cursor.executemany(query, data)
         self.connection.commit()
 
     def roomsStudentCount(self) -> list:
@@ -92,7 +119,7 @@ class DB:
         FROM Rooms r 
         JOIN Students s ON r.id = s.room 
         GROUP BY r.id, r.name 
-        ORDER BY AVG(TIMESTAMPDIFF(YEAR, s.birthday, NOW())) ASC 
+        ORDER BY AVG(DATEDIFF(NOW(), s.birthday)) ASC 
         LIMIT 5;
         """
 
@@ -106,7 +133,7 @@ class DB:
         FROM Rooms r 
         JOIN Students s ON r.id = s.room 
         GROUP BY r.id, r.name 
-        ORDER BY TIMESTAMPDIFF(YEAR, MIN(s.birthday), MAX(s.birthday)) DESC 
+        ORDER BY DATEDIFF(MAX(s.birthday), MIN(s.birthday)) DESC 
         LIMIT 5;
         """
         self.cursor.execute(query)

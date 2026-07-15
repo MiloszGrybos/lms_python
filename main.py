@@ -23,34 +23,38 @@ def main():
     db_password = os.getenv('DB_PASSWORD')
     db_name = os.getenv('DB_NAME', 'Dorms')
 
-    #launching db with parameters from .env    
-    db = DB(host=db_host, user=db_user, password=db_password, database=db_name)
-    db.createTables()    
-    
     reader = JSONReader()
     rooms_data = reader.read(args.rooms)
     students_data = reader.read(args.students)
-    
-    #inserting data into tables
-    db.insertRooms(rooms_data)
-    db.insertStudents(students_data)
-    
-    if args.format == 'json':
-        exporter = JSONExporter()
-    else:
-        exporter = XMLExporter()
+
+    if len(rooms_data) == 0 or len(students_data) == 0:
+        print("At least one of files is empty")
+        return
+
+    #launching db with parameters from .env    
+    with DB(host=db_host, user=db_user, password=db_password, database=db_name) as db:
+        db.createTables()    
         
-    result_count = db.roomsStudentCount()
-    exporter.export(result_count, f"roomCount.{args.format}")
+        #inserting data into tables
+        db.insertRooms(rooms_data)
+        db.insertStudents(students_data)
+        
+        if args.format == 'json':
+            exporter = JSONExporter()
+        else:
+            exporter = XMLExporter()
+            
+        result_count = db.roomsStudentCount()
+        exporter.export(result_count, f"roomCount.{args.format}")
 
-    result_avg_age = db.smallestAvgAge()
-    exporter.export(result_avg_age, f"smallestAvgAge.{args.format}")
+        result_avg_age = db.smallestAvgAge()
+        exporter.export(result_avg_age, f"smallestAvgAge.{args.format}")
 
-    result_diff_age = db.maxAgeDiff()
-    exporter.export(result_diff_age, f"maxAgeDiff.{args.format}")
+        result_diff_age = db.maxAgeDiff()
+        exporter.export(result_diff_age, f"maxAgeDiff.{args.format}")
 
-    result_sex = db.differentSex()
-    exporter.export(result_sex, f"differentSex.{args.format}")
+        result_sex = db.differentSex()
+        exporter.export(result_sex, f"differentSex.{args.format}")
 
 if __name__ == '__main__':
     main()
