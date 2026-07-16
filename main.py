@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from database import DB
 from readers import JSONReader
 from exporters import JSONExporter, XMLExporter
+from mysql.connector import Error
 
 load_dotenv()
 
@@ -31,30 +32,34 @@ def main():
         print("At least one of files is empty")
         return
 
-    #launching db with parameters from .env    
-    with DB(host=db_host, user=db_user, password=db_password, database=db_name) as db:
-        db.createTables()    
-        
-        #inserting data into tables
-        db.insertRooms(rooms_data)
-        db.insertStudents(students_data)
-        
-        if args.format == 'json':
-            exporter = JSONExporter()
-        else:
-            exporter = XMLExporter()
+    try:
+        #launching db with parameters from .env    
+        with DB(host=db_host, user=db_user, password=db_password, database=db_name) as db:
+            db.createTables()    
             
-        result_count = db.roomsStudentCount()
-        exporter.export(result_count, f"roomCount.{args.format}")
+            #inserting data into tables
+            db.insertRooms(rooms_data)
+            db.insertStudents(students_data)
+            
+            if args.format == 'json':
+                exporter = JSONExporter()
+            else:
+                exporter = XMLExporter()
+                
+            result_count = db.roomsStudentCount()
+            exporter.export(result_count, f"roomCount.{args.format}")
 
-        result_avg_age = db.smallestAvgAge()
-        exporter.export(result_avg_age, f"smallestAvgAge.{args.format}")
+            result_avg_age = db.smallestAvgAge()
+            exporter.export(result_avg_age, f"smallestAvgAge.{args.format}")
 
-        result_diff_age = db.maxAgeDiff()
-        exporter.export(result_diff_age, f"maxAgeDiff.{args.format}")
+            result_diff_age = db.maxAgeDiff()
+            exporter.export(result_diff_age, f"maxAgeDiff.{args.format}")
 
-        result_sex = db.differentSex()
-        exporter.export(result_sex, f"differentSex.{args.format}")
+            result_sex = db.differentSex()
+            exporter.export(result_sex, f"differentSex.{args.format}")
+
+    except Error as e:
+        print(f"Database connection failed: {e}")
 
 if __name__ == '__main__':
     main()

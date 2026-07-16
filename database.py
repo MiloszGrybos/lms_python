@@ -36,8 +36,7 @@ class DB:
             temp_cursor.close()
             temp_conn.close()
         except Error as e:
-            print("Connection couldn't be established")
-            return
+            raise e
 
         try:
             self.connection = mysql.connector.connect(
@@ -48,7 +47,7 @@ class DB:
             )
             self.cursor = self.connection.cursor(dictionary=True)
         except Error as e:
-            print("Connection couldn't be established, but database was created")
+            raise e
 
     def createTables(self) -> None:
         #Creating tables if they don't exist yet
@@ -88,16 +87,16 @@ class DB:
     def insertStudents(self, student_list: list) -> None:
         #inserting into Students table
         query = """
-        INSERT INTO Students (id, name, birthday, sex, room_id) 
+        INSERT INTO Students (id, name, birthday, sex, room) 
         VALUES (%s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE 
             name = VALUES(name), 
             birthday = VALUES(birthday), 
             sex = VALUES(sex), 
-            room_id = VALUES(room_id);
+            room = VALUES(room);
         """
 
-        data = [(student['id'], student['name'], student['birthday'], student['sex'], student['room_id']) for student in student_list]
+        data = [(student['id'], student['name'], student['birthday'], student['sex'], student['room']) for student in student_list]
         self.cursor.executemany(query, data)
         self.connection.commit()
 
